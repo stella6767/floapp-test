@@ -2,10 +2,12 @@ package com.kang.floapptest.adapter;
 
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.IBinder;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -29,13 +31,12 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
 
     private static final String TAG = "MusicAdapter";
     private final MainActivity mainActivity;
-    private MediaPlayer mp = new MediaPlayer();
 
     private List<Music> musics = new ArrayList<>();
 
-    public MusicAdapter(MainActivity mainActivity, MediaPlayer mp) {
+
+    public MusicAdapter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
-        //this.mp = mp;  //안 되네.... 서비스 바인딩 어케하지...
     }
 
     public Integer getMovieId(int position){
@@ -48,16 +49,11 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
         notifyDataSetChanged();
     }
 
-    public void playMusic(int position) throws IOException { //mutable live data만 삭제..
-        mp.reset();
-        mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        mp.setDataSource(musics.get(position).getUrl());
-        mp.prepare(); // might take long! (for buffering, etc)
-        mp.start();
 
+    public String getMusic(int position){
+        String musicUrl = musics.get(position).getUrl();
+        return musicUrl;
     }
-
-    
 
 
 
@@ -97,9 +93,10 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
             btnPlay = itemView.findViewById(R.id.btn_play);
 
             btnPlay.setOnClickListener(v -> {
-                Log.d(TAG, "MyViewHolder: 클릭됨"+getAdapterPosition());
+
+                String musicUrl = getMusic(getAdapterPosition());
                 try {
-                    playMusic(getAdapterPosition());
+                    mainActivity.playSong(musicUrl);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

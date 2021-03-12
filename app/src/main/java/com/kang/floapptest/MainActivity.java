@@ -7,28 +7,36 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Button;
 
 import com.kang.floapptest.adapter.MusicAdapter;
 import com.kang.floapptest.model.Music;
 import com.kang.floapptest.service.PlayService;
 import com.kang.floapptest.viewmodel.MusicViewModel;
 
+import java.io.IOException;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity2";
 
+    private MainActivity mContext = MainActivity.this;
+
     private RecyclerView rvMusicList;
     private MusicViewModel musicViewModel;
     private MusicAdapter musicAdapter;
     private PlayService playService;
     private MediaPlayer mp;
+    private Button btnPlay;
 
 
     ServiceConnection connection = new ServiceConnection() {
@@ -61,14 +69,16 @@ public class MainActivity extends AppCompatActivity {
         musicViewModel = new ViewModelProvider(this).get(MusicViewModel.class);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         rvMusicList.setLayoutManager(layoutManager);
-        musicAdapter = new MusicAdapter(MainActivity.this,mp);
+        musicAdapter = new MusicAdapter(mContext);
         rvMusicList.setAdapter(musicAdapter);
+
+        // 서비스 바인딩 하기
+        Intent musicIntent = new Intent(getApplicationContext(), PlayService.class);
+        bindService(musicIntent, connection, BIND_AUTO_CREATE);
+
 
         initData();
         initObserve();
-
-
-
 
     }
 
@@ -85,4 +95,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+    public void playSong(String musicUrl) throws IOException {
+        mp.reset();
+        mp.setDataSource(musicUrl);
+        mp.prepare(); // might take long! (for buffering, etc)
+        mp.start();
+    }
+
+
+
+
 }
