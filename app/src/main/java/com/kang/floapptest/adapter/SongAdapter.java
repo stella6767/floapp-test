@@ -8,7 +8,6 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.kang.floapptest.MainActivity;
@@ -20,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder>{
+public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder>{
 
     private static final String TAG = "MusicAdapter";
     private final MainActivity mainActivity;
@@ -28,7 +27,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
     private List<Song> songList = new ArrayList<>();
 
 
-    public MusicAdapter(MainActivity mainActivity) {
+    public SongAdapter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
     }
 
@@ -37,17 +36,16 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
     }
 
 
-    public void setMusics(List<Song> musics){
-        this.songList = musics;
+    public void setMusics(List<Song> songList){
+        this.songList = songList;
         notifyDataSetChanged();
     }
 
 
-    public String getMusic(int position){
-        String musicUrl = Constants.BASEURL+ Constants.FILEPATH +songList.get(position).getFile();
-        return musicUrl;
+    public String getSongUrl(int position){
+        String songUrl = Constants.BASEURL+ Constants.FILEPATH +songList.get(position).getFile();
+        return songUrl;
     }
-
 
 
 
@@ -87,17 +85,14 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
 
             btnPlay.setOnClickListener(v -> {
 
-                String musicUrl = getMusic(getAdapterPosition());
-
-
-
+                String songUrl = getSongUrl(getAdapterPosition());
 
                 mainActivity.isPlaying = mainActivity.isPlaying * -1;
 
                     if (mainActivity.isPlaying == 1) {
 
                         try {
-                            mainActivity.playSong(musicUrl);
+                            mainActivity.playSong(songUrl);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -106,34 +101,10 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
 
                     }
 
-                    mainActivity.uiHandleThread = new Thread(new Runnable() {
-                        @Override
-                        public void run() {
 
-                            while (mainActivity.isPlaying == 1) {
-                                mainActivity.handler.post(new Runnable() {// runOnUiThread랑 같음, 대신 이렇게 쓰면 uiHandleThread 쓰레드를 원하는데서 참조가능
-                                    @Override //UI 변경하는 애만 메인 스레드에게 메시지를 전달
-                                    public void run() {
-                                        mainActivity.seekBar.setProgress(mainActivity.mp.getCurrentPosition());
+                   // new Thread()
 
-                                        if (mainActivity.mp.getCurrentPosition() >= mainActivity.mp.getDuration()) {
-                                            mainActivity.musicStop();
-                                        }
-                                    }
-                                });
 
-                                try {
-                                    Thread.sleep(1000);
-                                    if(mainActivity.threadStatus){
-                                        mainActivity.uiHandleThread.interrupt(); //그 즉시 스레드 종료시키기 위해(강제종료), sleep을 무조건 걸어야 된다. 스레드가 조금이라도 쉬어야 동작함
-                                    }
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-                        }
-                    });
 
                     mainActivity.uiHandleThread.start();
                 });

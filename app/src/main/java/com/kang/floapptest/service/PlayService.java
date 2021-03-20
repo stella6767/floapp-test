@@ -9,14 +9,22 @@ import android.os.IBinder;
 
 import com.kang.floapptest.common.CustomMediaPlayer;
 
+import java.io.IOException;
+
 public class PlayService extends Service {
 
     private static final String TAG = "PlayService";
     private CustomMediaPlayer mp;
     private final IBinder mBinder = new LocalBinder();
+    private static final String ACTION_PLAY = "com.example.action.PLAY";
 
     public PlayService() {
     }
+
+    public CustomMediaPlayer getMediaPlayer(){
+        return mp;
+    }
+
 
     public class LocalBinder extends Binder { //패키지가 달라서 public
         public PlayService getService() {
@@ -31,9 +39,12 @@ public class PlayService extends Service {
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
     }
 
-    public CustomMediaPlayer getMediaPlayer(){
-        return mp;
+    public void songSetting(String songUrl) throws IOException {
+        mp.reset();
+            mp.setDataSource(songUrl);
+
     }
+
 
     @Override
     public IBinder onBind(Intent intent) {

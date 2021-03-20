@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -17,7 +18,7 @@ import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import com.kang.floapptest.adapter.MusicAdapter;
+import com.kang.floapptest.adapter.SongAdapter;
 import com.kang.floapptest.common.CustomMediaPlayer;
 import com.kang.floapptest.model.Song;
 import com.kang.floapptest.service.PlayService;
@@ -29,12 +30,14 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity2";
-
     private MainActivity mContext = MainActivity.this;
-
+    //서비스 관련
+    ServiceConnection connection;
+    Intent musicIntent;
+    //View 관련
     private RecyclerView rvMusicList;
     private MusicViewModel musicViewModel;
-    private MusicAdapter musicAdapter;
+    private SongAdapter songAdapter;
     private PlayService playService;
     public CustomMediaPlayer mp;
     private ImageButton btnPlay;
@@ -47,56 +50,19 @@ public class MainActivity extends AppCompatActivity {
     public boolean threadStatus = false;
 
 
-    ServiceConnection connection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
 
-            PlayService.LocalBinder mb = (PlayService.LocalBinder) service;
-            playService = mb.getService();
-            mp = playService.getMediaPlayer();
-            Log.d(TAG, "onServiceConnected: "+mp);
-
-
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mp.stop();
-            mp.release();
-        }
-    };
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) { //여기는 test2 branch
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        seekBar = findViewById(R.id.seekbar);
-        tvTime = findViewById(R.id.currentPosTV);
-        btnPlay = findViewById(R.id.btn_play);
 
-
-        rvMusicList = findViewById(R.id.rv_music_list);
-        musicViewModel = new ViewModelProvider(this).get(MusicViewModel.class);
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        rvMusicList.setLayoutManager(layoutManager);
-        musicAdapter = new MusicAdapter(mContext);
-        rvMusicList.setAdapter(musicAdapter);
-
-        // 서비스 바인딩 하기
-        Intent musicIntent = new Intent(getApplicationContext(), PlayService.class);
-        bindService(musicIntent, connection, BIND_AUTO_CREATE);
-
-
-        //뭔데 이거 여기는 test2 branch
+        serviceConnect();// 서비스 바인딩 하기
         initView();
         initData();
         initObserve();
         seekBarInit();
-
-
-
-
 
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -128,8 +94,43 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void initView(){
 
+    private void serviceConnect(){
+        connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {
+
+                PlayService.LocalBinder mb = (PlayService.LocalBinder) service;
+                playService = mb.getService();
+                mp = playService.getMediaPlayer();
+                Log.d(TAG, "onServiceConnected: "+mp);
+
+
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {
+                mp.stop();
+                mp.release();
+            }
+        };
+
+        musicIntent = new Intent(getApplicationContext(), PlayService.class);
+        bindService(musicIntent, connection, BIND_AUTO_CREATE);
+    }
+
+
+
+    private void initView(){
+        seekBar = findViewById(R.id.seekbar);
+        tvTime = findViewById(R.id.currentPosTV);
+        btnPlay = findViewById(R.id.btn_play);
+        rvMusicList = findViewById(R.id.rv_music_list);
+        musicViewModel = new ViewModelProvider(this).get(MusicViewModel.class);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        rvMusicList.setLayoutManager(layoutManager);
+        songAdapter = new SongAdapter(mContext);
+        rvMusicList.setAdapter(songAdapter);
     }
 
 
@@ -142,19 +143,27 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onChanged(List<Song> musics) {
                 Log.d(TAG, "onChanged: musics"+musics);
-                musicAdapter.setMusics(musics);
+                songAdapter.setMusics(musics);
             }
         });
     }
+
 
     public void playSong(String musicUrl) throws IOException {
         btnPlay.setImageResource(android.R.drawable.ic_media_pause);
 
         if (!musicUrl.equals(mp.getDatasource())){
+
             mp.reset();
             mp.setDataSource(musicUrl);
-            mp.prepare(); // might take long! (for buffering, etc)
-            mp.start();
+            mp.prepareAsync();
+            mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mp.start();
+                }
+            });
+
         }else{
             mp.start();
         }

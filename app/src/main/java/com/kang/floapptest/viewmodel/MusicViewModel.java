@@ -33,9 +33,6 @@ public class MusicViewModel extends ViewModel {
         return mtSongList;
     }
 
-    //뭐지 왜 브랜치가 동기화되지?
-
-
     public void findAll(){
         sr.networkConnect();
     }
