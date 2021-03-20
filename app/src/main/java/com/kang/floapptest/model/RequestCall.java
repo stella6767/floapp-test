@@ -9,6 +9,6 @@ import lombok.Data;
 @Data
 public class RequestCall {
     private int status = Constants.STOPPED;
-    private ArrayList<Music> songs=new ArrayList<>();
+    private ArrayList<Song> songList = new ArrayList<>();
 
 }

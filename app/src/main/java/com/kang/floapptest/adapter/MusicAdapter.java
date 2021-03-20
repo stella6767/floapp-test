@@ -1,27 +1,20 @@
 package com.kang.floapptest.adapter;
 
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.os.IBinder;
-import android.provider.MediaStore;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.kang.floapptest.MainActivity;
 import com.kang.floapptest.R;
-import com.kang.floapptest.model.Music;
-import com.kang.floapptest.service.PlayService;
+import com.kang.floapptest.common.Constants;
+import com.kang.floapptest.model.Song;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +25,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
     private static final String TAG = "MusicAdapter";
     private final MainActivity mainActivity;
 
-    private List<Music> musics = new ArrayList<>();
+    private List<Song> songList = new ArrayList<>();
 
 
     public MusicAdapter(MainActivity mainActivity) {
@@ -40,18 +33,18 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
     }
 
     public Integer getMovieId(int position){
-        return musics.get(position).getId();
+        return songList.get(position).getId();
     }
 
 
-    public void setMusics(List<Music> musics){
-        this.musics = musics;
+    public void setMusics(List<Song> musics){
+        this.songList = musics;
         notifyDataSetChanged();
     }
 
 
     public String getMusic(int position){
-        String musicUrl = musics.get(position).getUrl();
+        String musicUrl = Constants.BASEURL+ Constants.FILEPATH +songList.get(position).getFile();
         return musicUrl;
     }
 
@@ -69,12 +62,12 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
-        holder.setItem(musics.get(position));
+        holder.setItem(songList.get(position));
     }
 
     @Override
     public int getItemCount() {
-        return musics.size();
+        return songList.size();
     }
 
 
@@ -83,7 +76,7 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
         //2번 user_item이 가지고 있는 위젯들을 선언
         private TextView tvArtist;
         private TextView tvName;
-        private Button btnPlay;
+        private ImageButton btnPlay; //이건 리사이클러뷰 안의 btn
 
 
         public MyViewHolder(@NonNull View itemView) {
@@ -95,18 +88,61 @@ public class MusicAdapter extends RecyclerView.Adapter<MusicAdapter.MyViewHolder
             btnPlay.setOnClickListener(v -> {
 
                 String musicUrl = getMusic(getAdapterPosition());
-                try {
-                    mainActivity.playSong(musicUrl);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
+
+
+
+
+                mainActivity.isPlaying = mainActivity.isPlaying * -1;
+
+                    if (mainActivity.isPlaying == 1) {
+
+                        try {
+                            mainActivity.playSong(musicUrl);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        mainActivity.musicPause();
+
+                    }
+
+                    mainActivity.uiHandleThread = new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            while (mainActivity.isPlaying == 1) {
+                                mainActivity.handler.post(new Runnable() {// runOnUiThread랑 같음, 대신 이렇게 쓰면 uiHandleThread 쓰레드를 원하는데서 참조가능
+                                    @Override //UI 변경하는 애만 메인 스레드에게 메시지를 전달
+                                    public void run() {
+                                        mainActivity.seekBar.setProgress(mainActivity.mp.getCurrentPosition());
+
+                                        if (mainActivity.mp.getCurrentPosition() >= mainActivity.mp.getDuration()) {
+                                            mainActivity.musicStop();
+                                        }
+                                    }
+                                });
+
+                                try {
+                                    Thread.sleep(1000);
+                                    if(mainActivity.threadStatus){
+                                        mainActivity.uiHandleThread.interrupt(); //그 즉시 스레드 종료시키기 위해(강제종료), sleep을 무조건 걸어야 된다. 스레드가 조금이라도 쉬어야 동작함
+                                    }
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }
+                        }
+                    });
+
+                    mainActivity.uiHandleThread.start();
+                });
 
         }
 
-        public void setItem(Music music){
-            tvName.setText(music.getName());
-            tvArtist.setText(music.getArtist());
+        public void setItem(Song song){
+            tvName.setText(song.getTitle());
+            tvArtist.setText(song.getArtist());
 
         }
 

@@ -7,10 +7,12 @@ import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
 
+import com.kang.floapptest.common.CustomMediaPlayer;
+
 public class PlayService extends Service {
 
     private static final String TAG = "PlayService";
-    private MediaPlayer mp;
+    private CustomMediaPlayer mp;
     private final IBinder mBinder = new LocalBinder();
 
     public PlayService() {
@@ -25,11 +27,11 @@ public class PlayService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        mp = new MediaPlayer();
+        mp = new CustomMediaPlayer();
         mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
     }
 
-    public MediaPlayer getMediaPlayer(){
+    public CustomMediaPlayer getMediaPlayer(){
         return mp;
     }
 
