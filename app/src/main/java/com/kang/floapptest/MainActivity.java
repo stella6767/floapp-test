@@ -88,7 +88,7 @@ public class MainActivity extends AppCompatActivity {
         bindService(musicIntent, connection, BIND_AUTO_CREATE);
 
 
-        //뭔데 이거 ???????????????????????
+        //뭔데 이거 여기는 test2 branch
         initView();
         initData();
         initObserve();
