@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder>{
+public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder> {
 
     private static final String TAG = "MusicAdapter";
     private final MainActivity mainActivity;
@@ -31,29 +31,28 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder>{
         this.mainActivity = mainActivity;
     }
 
-    public Integer getMovieId(int position){
+    public Integer getMovieId(int position) {
         return songList.get(position).getId();
     }
 
 
-    public void setMusics(List<Song> songList){
+    public void setMusics(List<Song> songList) {
         this.songList = songList;
         notifyDataSetChanged();
     }
 
 
-    public String getSongUrl(int position){
-        String songUrl = Constants.BASEURL+ Constants.FILEPATH +songList.get(position).getFile();
+    public String getSongUrl(int position) {
+        String songUrl = Constants.BASEURL + Constants.FILEPATH + songList.get(position).getFile();
         return songUrl;
     }
-
 
 
     @NonNull
     @Override
     public MyViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        LayoutInflater inflater = (LayoutInflater)parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View view = inflater.inflate(R.layout.music_item,parent,false);
+        LayoutInflater inflater = (LayoutInflater) parent.getContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.layout.music_item, parent, false);
 
         return new MyViewHolder(view); //view가 리스트뷰에 하나 그려짐.
     }
@@ -74,49 +73,43 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder>{
         //2번 user_item이 가지고 있는 위젯들을 선언
         private TextView tvArtist;
         private TextView tvName;
-        private ImageButton btnPlay; //이건 리사이클러뷰 안의 btn
+        private ImageButton btnPlayItem; //이건 리사이클러뷰 안의 btn
 
 
         public MyViewHolder(@NonNull View itemView) {
             super(itemView);
             tvArtist = itemView.findViewById(R.id.tv_artist);
             tvName = itemView.findViewById(R.id.tv_name);
-            btnPlay = itemView.findViewById(R.id.btn_play);
+            btnPlayItem = itemView.findViewById(R.id.btn_Item_play);
 
-            btnPlay.setOnClickListener(v -> {
+            btnPlayItem.setOnClickListener(v -> {
 
                 String songUrl = getSongUrl(getAdapterPosition());
 
                 mainActivity.isPlaying = mainActivity.isPlaying * -1;
 
-                    if (mainActivity.isPlaying == 1) {
+                if (mainActivity.isPlaying == 1) {
+                    btnPlayItem.setImageResource(android.R.drawable.ic_media_pause);
 
-                        try {
-                            mainActivity.playSong(songUrl);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        mainActivity.musicPause();
-
+                    try {
+                        mainActivity.playSong(songUrl);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
 
-
-                   // new Thread()
-
-
-
-                    mainActivity.uiHandleThread.start();
-                });
+                } else {
+                    btnPlayItem.setImageResource(android.R.drawable.ic_media_play);
+                    mainActivity.musicPause();
+                }
+            });
 
         }
 
-        public void setItem(Song song){
+        public void setItem(Song song) {
             tvName.setText(song.getTitle());
             tvArtist.setText(song.getArtist());
 
         }
-
 
 
     }

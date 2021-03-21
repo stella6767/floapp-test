@@ -27,6 +27,8 @@ import com.kang.floapptest.viewmodel.MusicViewModel;
 import java.io.IOException;
 import java.util.List;
 
+import lombok.SneakyThrows;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity2";
@@ -40,14 +42,13 @@ public class MainActivity extends AppCompatActivity {
     private SongAdapter songAdapter;
     private PlayService playService;
     public CustomMediaPlayer mp;
-    private ImageButton btnPlay;
+    private ImageButton btnPlayGlobal;
     public SeekBar seekBar;
     public TextView tvTime;
     public int isPlaying = -1; // 1은 음악재생, -1은 음악멈춤
     // 쓰레드 관련
-    public Handler handler = new Handler();
-    public Thread uiHandleThread;
     public boolean threadStatus = false;
+
 
 
 
@@ -62,8 +63,13 @@ public class MainActivity extends AppCompatActivity {
         initView();
         initData();
         initObserve();
-        seekBarInit();
+        listner();
 
+        seekBarInit();
+    }
+
+
+    private void listner(){
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
@@ -99,24 +105,20 @@ public class MainActivity extends AppCompatActivity {
         connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
-
                 PlayService.LocalBinder mb = (PlayService.LocalBinder) service;
                 playService = mb.getService();
                 mp = playService.getMediaPlayer();
                 Log.d(TAG, "onServiceConnected: "+mp);
-
-
             }
-
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 mp.stop();
                 mp.release();
             }
         };
-
         musicIntent = new Intent(getApplicationContext(), PlayService.class);
         bindService(musicIntent, connection, BIND_AUTO_CREATE);
+
     }
 
 
@@ -124,7 +126,7 @@ public class MainActivity extends AppCompatActivity {
     private void initView(){
         seekBar = findViewById(R.id.seekbar);
         tvTime = findViewById(R.id.currentPosTV);
-        btnPlay = findViewById(R.id.btn_play);
+        btnPlayGlobal = findViewById(R.id.btn_play_global);
         rvMusicList = findViewById(R.id.rv_music_list);
         musicViewModel = new ViewModelProvider(this).get(MusicViewModel.class);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
@@ -142,33 +144,27 @@ public class MainActivity extends AppCompatActivity {
         musicViewModel.subscribe().observe(MainActivity.this, new Observer<List<Song>>() {
             @Override
             public void onChanged(List<Song> musics) {
-                Log.d(TAG, "onChanged: musics"+musics);
                 songAdapter.setMusics(musics);
             }
         });
     }
 
 
-    public void playSong(String musicUrl) throws IOException {
-        btnPlay.setImageResource(android.R.drawable.ic_media_pause);
+    public void playSong(String songUrl) throws IOException{
+        Log.d(TAG, "playSong의 MainActivity: "+ playService.getMainActivity());
+        if(playService.getMainActivity()==null){
+            playService.setMainActivity(mContext);
+        }
 
-        if (!musicUrl.equals(mp.getDatasource())){
+        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
 
-            mp.reset();
-            mp.setDataSource(musicUrl);
-            mp.prepareAsync();
-            mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    mp.start();
-                }
-            });
-
+        if (!songUrl.equals(mp.getDatasource())){
+            playService.onPrepared(songUrl);
         }else{
             mp.start();
         }
-
     }
+
 
 
     public void seekBarInit(){
@@ -178,7 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void musicPause(){
         mp.pause();
-        btnPlay.setImageResource(android.R.drawable.ic_media_play);
+        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_play);
     }
 
     public void musicStop(){
@@ -186,8 +182,10 @@ public class MainActivity extends AppCompatActivity {
         mp.seekTo(0);
         seekBar.setProgress(0);
         threadStatus = true;
-        btnPlay.setImageResource(android.R.drawable.ic_media_play);
+        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_play);
     }
+
+
 
 
 
