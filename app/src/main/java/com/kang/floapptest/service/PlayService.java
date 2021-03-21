@@ -8,18 +8,19 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.SeekBar;
 
 import com.kang.floapptest.MainActivity;
 import com.kang.floapptest.common.CustomMediaPlayer;
+import com.kang.floapptest.common.SongEvent;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.io.IOException;
 
 import lombok.Data;
-import lombok.SneakyThrows;
 
 @Data
-public class PlayService extends Service  {
+public class PlayService extends Service {
 
     private static final String TAG = "PlayService";
     private CustomMediaPlayer mp;
@@ -27,38 +28,58 @@ public class PlayService extends Service  {
 
     private MainActivity mainActivity;
     private Handler handler = new Handler();
-    private Thread uiHandleThread;
+    public Thread uiHandleThread;
     private boolean threadStatus = false;
+    private int isFinishprepare = -1; // 왜 안 되는거지????
 
 
     public PlayService() {
     }
 
-    public CustomMediaPlayer getMediaPlayer(){
+    public CustomMediaPlayer getMediaPlayer() {
         return mp;
     }
 
-    public void setMainActivity(MainActivity mainActivity){
+    public void setMainActivity(MainActivity mainActivity) {
         Log.d(TAG, "setMainActivity: 실행됨");
         this.mainActivity = mainActivity;
     }
 
+//    public void onPrepared(String songUrl) throws IOException {
+//
+//        mp.reset();
+//        MediaPlayer mp2 = (MediaPlayer)mp; //Custom이라서 안 먹음거임?
+//        mp2.setOnPreparedListener(new MediaPlayer.OnPreparedListener() { //하 씨바 미치것네
+//            @Override
+//            public void onPrepared(MediaPlayer mp) {
+//                mp.start();
+//                seekBarUiHandle();
+//            }
+//        });
+//        mp2.setDataSource(songUrl);
+//        mp2.prepareAsync();
+//
+//    }
+
     public void onPrepared(String songUrl) throws IOException {
 
         mp.reset();
-        MediaPlayer mp2 = (MediaPlayer)mp; //Custom이라서 안 먹음거임?
-        mp2.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+        mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() { //하 씨바 미치것네
             @Override
             public void onPrepared(MediaPlayer mp) {
-                mp.start();
-                seekBarUiHandle();
+                EventBus.getDefault().post(new SongEvent(songUrl, mainActivity.isPlaying));
             }
         });
-        mp2.setDataSource(songUrl);
-        mp2.prepareAsync();
-
+        mp.setDataSource(songUrl);
+        mp.prepareAsync();
     }
 
+    public void songPlay() {
+        mainActivity.btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
+        mp.start();
+        seekBarUiHandle();
+
+    }
 
 
     public class LocalBinder extends Binder { //패키지가 달라서 public
@@ -78,6 +99,7 @@ public class PlayService extends Service  {
 
     @Override
     public IBinder onBind(Intent intent) {
+
         return mBinder;
     }
 
@@ -92,12 +114,12 @@ public class PlayService extends Service  {
     }
 
 
+    public void seekBarUiHandle() {
 
-    public void seekBarUiHandle(){
         uiHandleThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                while (mainActivity.isPlaying == 1 ) {
+                while (mainActivity.isPlaying == 1) {
 
                     handler.post(new Runnable() {// runOnUiThread랑 같음, 대신 이렇게 쓰면 uiHandleThread 쓰레드를 원하는데서 참조가능
                         @Override //UI 변경하는 애만 메인 스레드에게 메시지를 전달
@@ -105,18 +127,22 @@ public class PlayService extends Service  {
                             mainActivity.seekBar.setProgress(mp.getCurrentPosition());
 
                             if (mp.getCurrentPosition() >= mp.getDuration()) {
-                                mainActivity.musicStop();
+                                mainActivity.songStop();
                             }
                         }
+
                     });
 
                     try {
                         Thread.sleep(1000);
-                        if(threadStatus){
+                        Log.d(TAG, "run: 33333333");
+                        if (threadStatus) {
+                            Log.d(TAG, "run: 222222222");
                             uiHandleThread.interrupt(); //그 즉시 스레드 종료시키기 위해(강제종료), sleep을 무조건 걸어야 된다. 스레드가 조금이라도 쉬어야 동작함
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
+                        Log.d(TAG, "run: adadsasdda");
                     }
 
                 }

@@ -9,9 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.media.MediaPlayer;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.ImageButton;
@@ -20,14 +18,17 @@ import android.widget.TextView;
 
 import com.kang.floapptest.adapter.SongAdapter;
 import com.kang.floapptest.common.CustomMediaPlayer;
+import com.kang.floapptest.common.SongEvent;
 import com.kang.floapptest.model.Song;
 import com.kang.floapptest.service.PlayService;
 import com.kang.floapptest.viewmodel.MusicViewModel;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import java.io.IOException;
 import java.util.List;
-
-import lombok.SneakyThrows;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,15 +43,12 @@ public class MainActivity extends AppCompatActivity {
     private SongAdapter songAdapter;
     private PlayService playService;
     public CustomMediaPlayer mp;
-    private ImageButton btnPlayGlobal;
+    public ImageButton btnPlayGlobal;
     public SeekBar seekBar;
     public TextView tvTime;
     public int isPlaying = -1; // 1은 음악재생, -1은 음악멈춤
     // 쓰레드 관련
     public boolean threadStatus = false;
-
-
-
 
 
     @Override
@@ -66,10 +64,55 @@ public class MainActivity extends AppCompatActivity {
         listner();
 
         seekBarInit();
+
+        btnPlayGlobal.setOnClickListener(v -> {
+            if (isPlaying == 1) {
+                Log.d(TAG, "onCreate: 글로벌 버튼 클릭되고 노래멈춤" + isPlaying);
+                songPause();
+            } else {
+                Log.d(TAG, "onCreate: 노래시작" + isPlaying);
+                EventBus.getDefault().post(new SongEvent("", isPlaying));
+            }
+        });
+
+
     }
 
+    public void songPrepare(String songUrl) throws IOException {
+        seekBarInit();
 
-    private void listner(){
+        Log.d(TAG, "playSong의 MainActivity: " + playService.getMainActivity());
+        if (playService.getMainActivity() == null) {
+            playService.setMainActivity(mContext);
+        }
+
+        if (!songUrl.equals(mp.getDatasource())) {
+
+            Log.d(TAG, "songPlay: Song 시작");
+            playService.onPrepared(songUrl);
+
+        } else {
+            Log.d(TAG, "songPrepare: 같은 노래 클릭");
+            //playService.uiHandleThread.interrupt();
+            isPlaying = isPlaying * -1;
+            mp.reset();
+            playService.onPrepared(songUrl);
+            //EventBus.getDefault().post(new SongEvent(songUrl, isPlaying));
+
+        }
+
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void songPlay(SongEvent event) {
+        isPlaying = 1;
+        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
+        mp.start();
+        playService.seekBarUiHandle();
+        Log.d(TAG, "eventSubscrive: event 받음" + event.songUrl + " isplaying: " + isPlaying);
+    }
+
+    private void listner() {
 
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
@@ -100,16 +143,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    private void serviceConnect(){
+    private void serviceConnect() {
         connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
                 PlayService.LocalBinder mb = (PlayService.LocalBinder) service;
                 playService = mb.getService();
                 mp = playService.getMediaPlayer();
-                Log.d(TAG, "onServiceConnected: "+mp);
+                Log.d(TAG, "onServiceConnected: " + mp);
             }
+
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 mp.stop();
@@ -122,8 +165,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-    private void initView(){
+    private void initView() {
         seekBar = findViewById(R.id.seekbar);
         tvTime = findViewById(R.id.currentPosTV);
         btnPlayGlobal = findViewById(R.id.btn_play_global);
@@ -150,45 +192,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public void playSong(String songUrl) throws IOException{
-        Log.d(TAG, "playSong의 MainActivity: "+ playService.getMainActivity());
-        if(playService.getMainActivity()==null){
-            playService.setMainActivity(mContext);
-        }
-
-        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
-
-        if (!songUrl.equals(mp.getDatasource())){
-            playService.onPrepared(songUrl);
-        }else{
-            mp.start();
-        }
-    }
-
-
-
-    public void seekBarInit(){
+    public void seekBarInit() {
         seekBar.setMax(100000);
         seekBar.setProgress(0);
     }
 
-    public void musicPause(){
+    public void songPause() {
         mp.pause();
+        isPlaying = -1;
         btnPlayGlobal.setImageResource(android.R.drawable.ic_media_play);
     }
 
-    public void musicStop(){
+    public void songStop() {
         mp.reset();
         mp.seekTo(0);
         seekBar.setProgress(0);
         threadStatus = true;
         btnPlayGlobal.setImageResource(android.R.drawable.ic_media_play);
+        isPlaying = -1;
     }
 
 
+    @Override
+    protected void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
 
-
-
-
-
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        EventBus.getDefault().unregister(this);
+    }
 }

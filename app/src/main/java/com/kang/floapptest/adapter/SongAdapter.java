@@ -1,6 +1,7 @@
 package com.kang.floapptest.adapter;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -86,21 +87,13 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.MyViewHolder> 
 
                 String songUrl = getSongUrl(getAdapterPosition());
 
-                mainActivity.isPlaying = mainActivity.isPlaying * -1;
-
-                if (mainActivity.isPlaying == 1) {
-                    btnPlayItem.setImageResource(android.R.drawable.ic_media_pause);
-
                     try {
-                        mainActivity.playSong(songUrl);
+                        Log.d(TAG, "MyViewHolder: 음악 클릭됨");
+                        mainActivity.songPrepare(songUrl);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
 
-                } else {
-                    btnPlayItem.setImageResource(android.R.drawable.ic_media_play);
-                    mainActivity.musicPause();
-                }
             });
 
         }

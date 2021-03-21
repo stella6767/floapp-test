@@ -19,4 +19,11 @@ public class CustomMediaPlayer extends MediaPlayer {
         return datasource;
     }
 
+    @Override
+    public int getDuration() {
+        return super.getDuration();
+    }
+
+
+
 }
