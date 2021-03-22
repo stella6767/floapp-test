@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
@@ -42,13 +43,14 @@ public class MainActivity extends AppCompatActivity {
     private MusicViewModel musicViewModel;
     private SongAdapter songAdapter;
     private PlayService playService;
-    public CustomMediaPlayer mp;
+    public MediaPlayer mp;
     public ImageButton btnPlayGlobal;
     public SeekBar seekBar;
     public TextView tvTime;
     public int isPlaying = -1; // 1은 음악재생, -1은 음악멈춤
     // 쓰레드 관련
     public boolean threadStatus = false;
+    private TextView tvTotalDuration;
 
 
     @Override
@@ -71,7 +73,8 @@ public class MainActivity extends AppCompatActivity {
                 songPause();
             } else {
                 Log.d(TAG, "onCreate: 노래시작" + isPlaying);
-                EventBus.getDefault().post(new SongEvent("", isPlaying));
+                playService.songPlay();
+                //EventBus.getDefault().post(new SongEvent("", isPlaying));
             }
         });
 
@@ -86,31 +89,21 @@ public class MainActivity extends AppCompatActivity {
             playService.setMainActivity(mContext);
         }
 
-        if (!songUrl.equals(mp.getDatasource())) {
+        isPlaying = isPlaying * -1;
+        Log.d(TAG, "songPlay: Song 시작");
+        playService.onPrepared(songUrl);
 
-            Log.d(TAG, "songPlay: Song 시작");
-            playService.onPrepared(songUrl);
-
-        } else {
-            Log.d(TAG, "songPrepare: 같은 노래 클릭");
-            //playService.uiHandleThread.interrupt();
-            isPlaying = isPlaying * -1;
-            mp.reset();
-            playService.onPrepared(songUrl);
-            //EventBus.getDefault().post(new SongEvent(songUrl, isPlaying));
-
-        }
-
+        //EventBus.getDefault().post(new SongEvent(songUrl, isPlaying));
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void songPlay(SongEvent event) {
-        isPlaying = 1;
-        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
-        mp.start();
-        playService.seekBarUiHandle();
-        Log.d(TAG, "eventSubscrive: event 받음" + event.songUrl + " isplaying: " + isPlaying);
-    }
+//    @Subscribe(threadMode = ThreadMode.MAIN)
+//    public void songPlay(SongEvent event) {
+//        isPlaying = 1;
+//        btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
+//        mp.start();
+//        playService.seekBarUiHandle();
+//        Log.d(TAG, "eventSubscrive: event 받음" + event.songUrl + " isplaying: " + isPlaying);
+//    }
 
     private void listner() {
 
@@ -142,11 +135,24 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void setTotalDuration(){
+        Integer totalTime = mp.getDuration();
+
+        int m = totalTime / 60000;
+        int s = (totalTime % 60000) / 1000;
+        String strTime = String.format("%02d:%02d", m, s);
+
+        tvTotalDuration.setText(strTime);
+
+    }
+
+
 
     private void serviceConnect() {
         connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName name, IBinder service) {
+                Log.d(TAG, "ServiceConnection: connected to service.");
                 PlayService.LocalBinder mb = (PlayService.LocalBinder) service;
                 playService = mb.getService();
                 mp = playService.getMediaPlayer();
@@ -175,6 +181,7 @@ public class MainActivity extends AppCompatActivity {
         rvMusicList.setLayoutManager(layoutManager);
         songAdapter = new SongAdapter(mContext);
         rvMusicList.setAdapter(songAdapter);
+        tvTotalDuration = findViewById(R.id.tvTotalDuration);
     }
 
 
@@ -213,15 +220,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-        EventBus.getDefault().register(this);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        EventBus.getDefault().unregister(this);
-    }
+//    @Override
+//    protected void onStart() {
+//        super.onStart();
+//        EventBus.getDefault().register(this);
+//    }
+//
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        EventBus.getDefault().unregister(this);
+//    }
 }

@@ -20,10 +20,11 @@ import java.io.IOException;
 import lombok.Data;
 
 @Data
-public class PlayService extends Service {
+public class PlayService extends Service implements MediaPlayer.OnPreparedListener{
 
     private static final String TAG = "PlayService";
-    private CustomMediaPlayer mp;
+    //private CustomMediaPlayer mp;
+    private MediaPlayer mp;
     private final IBinder mBinder = new LocalBinder();
 
     private MainActivity mainActivity;
@@ -36,7 +37,7 @@ public class PlayService extends Service {
     public PlayService() {
     }
 
-    public CustomMediaPlayer getMediaPlayer() {
+    public MediaPlayer getMediaPlayer() {
         return mp;
     }
 
@@ -67,7 +68,8 @@ public class PlayService extends Service {
         mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() { //하 씨바 미치것네
             @Override
             public void onPrepared(MediaPlayer mp) {
-                EventBus.getDefault().post(new SongEvent(songUrl, mainActivity.isPlaying));
+                //EventBus.getDefault().post(new SongEvent(songUrl, mainActivity.isPlaying));
+               songPlay();
             }
         });
         mp.setDataSource(songUrl);
@@ -75,6 +77,17 @@ public class PlayService extends Service {
     }
 
     public void songPlay() {
+        mainActivity.seekBar.setMax(mp.getDuration());
+        mainActivity.setTotalDuration();
+        mainActivity.isPlaying = 1;
+        mainActivity.btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
+        mp.start();
+        seekBarUiHandle();
+
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) { //이게 필요없는거지?????
         mainActivity.btnPlayGlobal.setImageResource(android.R.drawable.ic_media_pause);
         mp.start();
         seekBarUiHandle();
